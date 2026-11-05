@@ -81,3 +81,19 @@ def get_refund_history(user_id):
         }
     except Exception as e:
         return f"Error getting refund history: {e}"
+
+
+def check_delivery_status(tracking_number):
+    try:
+        order = Order.objects.get(tracking_number=tracking_number)
+    except (Order.DoesNotExist, TypeError, ValueError):
+        return f"Order with tracking number {tracking_number} does not exist"
+    except Exception as e:
+        return f"Error checking delivery status: {e}"
+
+    return {
+        "tracking_number": order.tracking_number,
+        "carrier": order.carrier,
+        "delivery_status": order.status,
+        "last_updated": order.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+    }
