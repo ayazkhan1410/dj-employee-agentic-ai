@@ -1,9 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-from orders.utils.choices import (
-    OrderStatus, Carrier, RefundStatus
-)
+from orders.utils.choices import OrderStatus, Carrier, RefundStatus
 
 
 class TimeStampedModel(models.Model):
@@ -21,8 +19,11 @@ class Category(TimeStampedModel):
 
 class Product(TimeStampedModel):
     category = models.ForeignKey(
-        Category, on_delete=models.CASCADE, related_name="products",
-        null=True, blank=True
+        Category,
+        on_delete=models.CASCADE,
+        related_name="products",
+        null=True,
+        blank=True,
     )
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
@@ -31,27 +32,21 @@ class Product(TimeStampedModel):
 
 
 class Order(TimeStampedModel):
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="orders"
-    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders")
     carrier = models.CharField(
-        max_length=255, choices=Carrier.choices,
-        null=True, blank=True
+        max_length=255, choices=Carrier.choices, null=True, blank=True
     )
     tracking_number = models.CharField(max_length=255, null=True, blank=True)
     shipping_address = models.CharField(max_length=255, null=True, blank=True)
     customer_phone = models.CharField(max_length=255, null=True, blank=True)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(
-        max_length=255, choices=OrderStatus.choices,
-        default=OrderStatus.PENDING
+        max_length=255, choices=OrderStatus.choices, default=OrderStatus.PENDING
     )
 
 
 class OrderItem(TimeStampedModel):
-    order = models.ForeignKey(
-        Order, on_delete=models.CASCADE, related_name="items"
-    )
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name="order_items"
     )
@@ -65,6 +60,5 @@ class RefundRequest(TimeStampedModel):
     )
     reason = models.TextField(blank=True, null=True)
     status = models.CharField(
-        max_length=255, choices=RefundStatus.choices,
-        default=RefundStatus.PENDING
+        max_length=255, choices=RefundStatus.choices, default=RefundStatus.PENDING
     )
