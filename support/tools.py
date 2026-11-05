@@ -1,5 +1,6 @@
-from orders.models import Order
 from django.utils import timezone
+
+from orders.models import Order, RefundRequest
 
 
 def get_order_details(order_id):
@@ -40,3 +41,43 @@ def get_order_details(order_id):
             for item in order.items.all()
         ],
     }
+
+
+def get_refund_history(user_id):
+    try:
+        refund_requests = (
+            RefundRequest.objects.filter(order__user_id=user_id)
+            .select_related("order")
+            .prefetch_related("order__items__product")
+            .order_by("-created_at")
+        )
+
+        history = [
+            {
+                # -------------------
+                # Refund Request Details
+                # -------------------
+                "refund_request_id": refund_request.pk,
+                "refund_request_date": refund_request.created_at.strftime(
+                    "%Y-%m-%d"
+                ),
+                "refund_request_status": refund_request.status,
+                "refund_request_reason": refund_request.reason,
+
+                # -------------------
+                # Order Details
+                # -------------------
+                "refund_request_order_id": refund_request.order.pk,
+                "refund_request_product_names": [
+                    item.product.name
+                    for item in refund_request.order.items.all()
+                ],
+            }
+            for refund_request in refund_requests
+        ]
+        return {
+            "total_refund_requests": len(history),
+            "refund_requests": history,
+        }
+    except Exception as e:
+        return f"Error getting refund history: {e}"

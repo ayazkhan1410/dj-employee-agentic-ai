@@ -5,9 +5,9 @@ from support.models import AgentLog, Conversation, Message
 
 @admin.register(Conversation)
 class ConversationAdmin(admin.ModelAdmin):
-    list_display = ("id", "title", "user", "order", "created_at", "updated_at")
+    list_display = ("id", "title", "user_id", "order_id", "created_at", "updated_at")
     list_filter = ("created_at",)
-    search_fields = ("title", "user__email", "user__username")
+    search_fields = ("title", "user__id", "user__email", "user__username")
     readonly_fields = ("created_at", "updated_at")
     fields = ("title", "user", "order", "created_at", "updated_at")
     raw_id_fields = ("user", "order")

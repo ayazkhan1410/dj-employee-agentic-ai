@@ -41,7 +41,7 @@ class ProductAdmin(admin.ModelAdmin):
 class OrderAdmin(admin.ModelAdmin):
     list_display = (
         "id",
-        "user",
+        "user_id",
         "status",
         "carrier",
         "tracking_number",
@@ -52,8 +52,15 @@ class OrderAdmin(admin.ModelAdmin):
         "updated_at",
     )
     list_filter = ("status", "carrier")
-    search_fields = ("tracking_number", "customer_phone", "user__username")
+    search_fields = (
+        "tracking_number",
+        "customer_phone",
+        "user__id",
+        "user__username",
+        "user__email",
+    )
     readonly_fields = ("created_at", "updated_at")
+    raw_id_fields = ("user",)
     fields = (
         "user",
         "carrier",
