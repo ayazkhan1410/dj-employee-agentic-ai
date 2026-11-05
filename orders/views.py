@@ -84,7 +84,10 @@ class OrderListCreateAPIView(APIView):
         serializer.is_valid(raise_exception=True)
 
         order = create_order_for_user(request.user, serializer.validated_data)
-        logger.info("Order created id=%s user_id=%s", order.id, request.user.id)
+        logger.info(
+            "Order created id=%s user_id=%s",
+            order.id, request.user.id
+        )
 
         return Response(order_to_dict(order), status=status.HTTP_201_CREATED)
 

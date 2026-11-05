@@ -3,6 +3,8 @@
   --my: 40%;
   position: relative;
   min-height: 100vh;
+  width: 100%;
+  max-width: 100vw;
   display: grid;
   grid-template-rows: auto 1fr auto;
   overflow-x: hidden;
@@ -67,6 +69,8 @@
 .site-panel {
   width: min(1080px, calc(100% - 32px));
   margin: 0 auto;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .site-header-inner {
@@ -227,6 +231,16 @@
 .user-meta {
   display: grid;
   line-height: 1.2;
+  min-width: 0;
+  text-align: left;
+}
+
+.user-meta strong,
+.user-meta small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
 }
 
 .user-meta strong {
@@ -240,6 +254,8 @@
 
 .site-main {
   padding: 28px 0 48px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .site-panel {
@@ -249,6 +265,7 @@
   padding: 24px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(18px);
+  overflow-x: hidden;
 }
 
 .site-footer {
@@ -282,6 +299,8 @@
 .auth-box {
   display: grid;
   gap: 16px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .dash-hero {
@@ -290,12 +309,18 @@
   gap: 16px;
   align-items: flex-start;
   flex-wrap: wrap;
+  min-width: 0;
+}
+
+.dash-hero > div {
+  min-width: 0;
 }
 
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
   gap: 12px;
+  min-width: 0;
 }
 
 .stat-card {
@@ -307,6 +332,7 @@
   gap: 6px;
   color: inherit;
   text-align: left;
+  min-width: 0;
 }
 
 .stat-card.clickable {
@@ -375,14 +401,17 @@
 
 .chart-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   gap: 12px;
+  min-width: 0;
 }
 
 .chart-card {
   padding: 16px;
   display: grid;
   gap: 14px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .chart-card-head {
@@ -405,9 +434,10 @@
 
 .donut-wrap {
   display: grid;
-  grid-template-columns: 150px 1fr;
+  grid-template-columns: 150px minmax(0, 1fr);
   gap: 14px;
   align-items: center;
+  min-width: 0;
 }
 
 .donut {
@@ -471,6 +501,8 @@
   gap: 8px;
   align-items: end;
   min-height: 160px;
+  min-width: 0;
+  width: 100%;
 }
 
 .bar-col {
@@ -1234,8 +1266,6 @@
   }
 
   .home-grid,
-  .stat-grid,
-  .chart-grid,
   .donut-wrap,
   .orders-filters,
   .order-create-grid,
@@ -1243,7 +1273,24 @@
     grid-template-columns: 1fr;
   }
 
+  .donut-wrap {
+    justify-items: center;
+  }
+
   .task-card {
     grid-template-columns: 1fr;
+  }
+
+  .site-panel {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .home-actions {
+    width: 100%;
+  }
+
+  .action-chip {
+    flex: 1 1 auto;
   }
 }
