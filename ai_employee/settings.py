@@ -1,24 +1,25 @@
 from datetime import timedelta
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+from decouple import Csv, config
+
+# -------------------------
+# Paths
+# -------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-azcyely6wfl_3vt9475mbg_^*nr2m@x&(qh3_%rfr(z+btt=lt"
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", "192.168.10.210"]
+# -------------------------
+# Security / Core
+# -------------------------
+SECRET_KEY = config("SECRET_KEY")
+DEBUG = config("DEBUG", default=False, cast=bool)
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="127.0.0.1,localhost", cast=Csv())
 
 
-# Application definition
-
+# -------------------------
+# Installed Apps
+# -------------------------
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -33,6 +34,10 @@ INSTALLED_APPS = [
     "orders",
 ]
 
+
+# -------------------------
+# Middleware
+# -------------------------
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -44,22 +49,38 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+
+# -------------------------
+# Django REST Framework
+# -------------------------
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_PAGINATION_CLASS": "ai_employee.pagination.StandardResultsSetPagination",
-    "PAGE_SIZE": 5,
+    "PAGE_SIZE": config("PAGE_SIZE", default=5, cast=int),
 }
 
+
+# -------------------------
+# JWT Auth
+# -------------------------
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        days=config("JWT_ACCESS_DAYS", default=1, cast=int)
+    ),
+    "REFRESH_TOKEN_LIFETIME": timedelta(
+        days=config("JWT_REFRESH_DAYS", default=7, cast=int)
+    ),
     "ROTATE_REFRESH_TOKENS": False,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
+
+# -------------------------
+# Logging
+# -------------------------
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -84,12 +105,20 @@ LOGGING = {
     },
 }
 
-CORS_ALLOWED_ORIGINS = [
-    "http://127.0.0.1:3000",
-    "http://localhost:3000",
-    "http://192.168.10.210:3000",
-]
 
+# -------------------------
+# CORS
+# -------------------------
+CORS_ALLOWED_ORIGINS = config(
+    "CORS_ALLOWED_ORIGINS",
+    default="http://127.0.0.1:3000,http://localhost:3000",
+    cast=Csv(),
+)
+
+
+# -------------------------
+# URLs / Templates / WSGI
+# -------------------------
 ROOT_URLCONF = "ai_employee.urls"
 
 TEMPLATES = [
@@ -110,24 +139,24 @@ TEMPLATES = [
 WSGI_APPLICATION = "ai_employee.wsgi.application"
 
 
+# -------------------------
 # Database
-# https://docs.djangoproject.com/en/6.1/ref/settings/#databases
-
+# -------------------------
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": "ai_employee_db",
-        "USER": "ai_employee",
-        "PASSWORD": "1234",
-        "HOST": "127.0.0.1",
-        "PORT": "3306",
+        "ENGINE": config("DB_ENGINE", default="django.db.backends.mysql"),
+        "NAME": config("DB_NAME"),
+        "USER": config("DB_USER"),
+        "PASSWORD": config("DB_PASSWORD"),
+        "HOST": config("DB_HOST", default="127.0.0.1"),
+        "PORT": config("DB_PORT", default="3306"),
     }
 }
 
 
-# Password validation
-# https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
-
+# -------------------------
+# Password Validation
+# -------------------------
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -144,27 +173,24 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+# -------------------------
 # Internationalization
-# https://docs.djangoproject.com/en/6.1/topics/i18n/
-
+# -------------------------
 LANGUAGE_CODE = "en-us"
-
-TIME_ZONE = "Asia/Karachi"
-
+TIME_ZONE = config("TIME_ZONE", default="Asia/Karachi")
 USE_I18N = True
-
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.1/howto/static-files/
-
+# -------------------------
+# Static Files
+# -------------------------
 STATIC_URL = "static/"
 
 
+# -------------------------
 # Email
-# https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
-
+# -------------------------
 MAILERS = {
     "default": {
         "BACKEND": "django.core.mail.backends.console.EmailBackend",
