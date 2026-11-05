@@ -33,7 +33,7 @@ class Product(TimeStampedModel):
 
 class Order(TimeStampedModel):
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, 
+        User, on_delete=models.CASCADE,
         related_name="orders"
     )
     carrier = models.CharField(
