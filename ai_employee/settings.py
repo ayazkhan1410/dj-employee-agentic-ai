@@ -197,3 +197,8 @@ MAILERS = {
         "BACKEND": "django.core.mail.backends.console.EmailBackend",
     },
 }
+
+# -------------------------
+# Gemini / AI
+# -------------------------
+GEMINI_API_KEY = config("GEMINI_API_KEY")
