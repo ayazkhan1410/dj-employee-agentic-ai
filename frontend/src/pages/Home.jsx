@@ -1,6 +1,14 @@
-import { useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { getDashboard } from '../api'
 import AppLayout from '../components/AppLayout'
+import {
+  NextSteps,
+  StatCards,
+  StatusDonut,
+  VolumeBars,
+} from '../components/DashboardCharts'
+import StatusBadge from '../components/StatusBadge'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -12,9 +20,34 @@ export default function Home() {
     }
   }, [])
 
+  const [dashboard, setDashboard] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
   useEffect(() => {
     if (!user) navigate('/login')
   }, [user, navigate])
+
+  useEffect(() => {
+    if (!user) return
+
+    let active = true
+    setLoading(true)
+    getDashboard()
+      .then((data) => {
+        if (active) setDashboard(data)
+      })
+      .catch((err) => {
+        if (active) setError(err.message)
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [user])
 
   if (!user) return null
 
@@ -33,38 +66,79 @@ export default function Home() {
   return (
     <AppLayout user={user} onLogout={logout}>
       <section className="home-hero">
-        <div className="user-card">
-          <div className="user-avatar lg" aria-hidden="true">
-            {(user.name || 'U').slice(0, 1).toUpperCase()}
-          </div>
+        <div className="dash-hero">
           <div>
-            <p className="eyebrow">Signed in</p>
+            <p className="eyebrow">My home</p>
             <h1>
               {greeting}, {firstName}
             </h1>
-            <p className="home-sub">{user.email}</p>
+            <p className="home-sub">
+              Here’s a quick look at your orders and what needs attention.
+            </p>
+          </div>
+          <div className="home-actions">
+            <button
+              type="button"
+              className="action-chip"
+              onClick={() => navigate('/orders')}
+            >
+              My orders
+            </button>
+            <button
+              type="button"
+              className="action-chip"
+              onClick={() => navigate('/orders')}
+            >
+              Place an order
+            </button>
           </div>
         </div>
 
-        <div className="home-actions">
-          <button type="button" className="action-chip" onClick={() => navigate('/orders')}>
-            View orders
-          </button>
-          <button type="button" className="action-chip" onClick={() => navigate('/orders')}>
-            Create order
-          </button>
-        </div>
+        {loading ? <p className="home-sub">Loading your overview…</p> : null}
+        {error ? <p className="auth-error">{error}</p> : null}
 
-        <div className="home-grid">
-          <article className="glass-card info-card">
-            <h3>Orders</h3>
-            <p>List, filter, update status, and delete your own orders.</p>
-          </article>
-          <article className="glass-card info-card">
-            <h3>Account</h3>
-            <p>You are logged in with JWT authentication for protected APIs.</p>
-          </article>
-        </div>
+        {dashboard ? (
+          <>
+            <StatCards summary={dashboard.summary} />
+
+            <div className="chart-grid">
+              <StatusDonut data={dashboard.charts.status} />
+              <VolumeBars data={dashboard.charts.volume} />
+              <NextSteps summary={dashboard.summary} />
+            </div>
+
+            <div className="glass-card recent-card">
+              <div className="chart-card-head">
+                <h3>Your recent orders</h3>
+                <Link to="/orders">See all</Link>
+              </div>
+              <div className="recent-list">
+                {dashboard.recent_orders.length ? (
+                  dashboard.recent_orders.map((order) => (
+                    <Link
+                      key={order.id}
+                      to={`/orders/${order.id}`}
+                      className="recent-row"
+                    >
+                      <div>
+                        <strong>Order #{order.id}</strong>
+                        <small>
+                          {order.carrier_display || 'Carrier pending'} · $
+                          {order.total_amount}
+                        </small>
+                      </div>
+                      <StatusBadge status={order.status} />
+                    </Link>
+                  ))
+                ) : (
+                  <p className="home-sub">
+                    You have no orders yet. Place one to get started.
+                  </p>
+                )}
+              </div>
+            </div>
+          </>
+        ) : null}
       </section>
     </AppLayout>
   )

@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 
 from ai_employee.pagination import paginate_queryset
 from orders.serializers import OrderValidationSerializer
+from orders.utils.dashboard import build_user_dashboard
 from orders.utils.order_helpers import (
     create_order_for_user,
     delete_order,
@@ -20,6 +21,18 @@ from orders.utils.order_helpers import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+# -------------------------
+# Dashboard
+# -------------------------
+class DashboardAPIView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        logger.info("Dashboard requested user_id=%s", request.user.id)
+        data = build_user_dashboard(request.user)
+        return Response(data)
 
 
 # -------------------------

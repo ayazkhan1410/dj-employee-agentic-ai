@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
 function initials(name = '') {
@@ -10,6 +11,18 @@ function initials(name = '') {
 export default function Header({ user, onLogout }) {
   const { pathname } = useLocation()
   const isAuth = pathname === '/login' || pathname === '/signup'
+  const [accountOpen, setAccountOpen] = useState(false)
+  const menuRef = useRef(null)
+
+  useEffect(() => {
+    function onClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setAccountOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [])
 
   return (
     <header className="site-header">
@@ -20,7 +33,7 @@ export default function Header({ user, onLogout }) {
           </span>
           <span>
             <strong>AI Employee</strong>
-            <small>Order management assistant</small>
+            <small>Your order assistant</small>
           </span>
         </Link>
 
@@ -40,25 +53,72 @@ export default function Header({ user, onLogout }) {
                 Home
               </Link>
               <Link to="/orders" className={pathname === '/orders' ? 'active' : ''}>
-                Orders
+                My orders
               </Link>
             </>
           )}
         </nav>
 
         {user ? (
-          <div className="user-profile">
-            <div className="user-avatar" aria-hidden="true">
-              {initials(user.name)}
-            </div>
-            <div className="user-meta">
-              <strong>{user.name || 'User'}</strong>
-              <small>{user.email}</small>
-            </div>
-            {onLogout ? (
-              <button type="button" className="ghost-btn" onClick={onLogout}>
-                Log out
-              </button>
+          <div className="account-menu" ref={menuRef}>
+            <button
+              type="button"
+              className={`account-trigger ${accountOpen ? 'open' : ''}`}
+              onClick={() => setAccountOpen((value) => !value)}
+              aria-expanded={accountOpen}
+              aria-haspopup="true"
+            >
+              <span className="user-avatar" aria-hidden="true">
+                {initials(user.name)}
+              </span>
+              <span className="user-meta">
+                <strong>{user.name || 'User'}</strong>
+                <small>Account</small>
+              </span>
+              <span className="account-caret" aria-hidden="true">
+                ▾
+              </span>
+            </button>
+
+            {accountOpen ? (
+              <div className="account-dropdown" role="menu">
+                <div className="account-dropdown-head">
+                  <span className="user-avatar lg" aria-hidden="true">
+                    {initials(user.name)}
+                  </span>
+                  <div>
+                    <strong>{user.name || 'User'}</strong>
+                    <small>{user.email}</small>
+                  </div>
+                </div>
+                <Link
+                  to="/home"
+                  role="menuitem"
+                  onClick={() => setAccountOpen(false)}
+                >
+                  Home
+                </Link>
+                <Link
+                  to="/orders"
+                  role="menuitem"
+                  onClick={() => setAccountOpen(false)}
+                >
+                  My orders
+                </Link>
+                {onLogout ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="account-logout"
+                    onClick={() => {
+                      setAccountOpen(false)
+                      onLogout()
+                    }}
+                  >
+                    Log out
+                  </button>
+                ) : null}
+              </div>
             ) : null}
           </div>
         ) : (

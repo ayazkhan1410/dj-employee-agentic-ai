@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { createOrder, deleteOrder, listOrders, patchOrder } from '../api'
 import AppLayout from '../components/AppLayout'
 import StatusBadge from '../components/StatusBadge'
@@ -26,6 +26,7 @@ const EMPTY_FORM = {
 
 export default function Orders() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const user = useMemo(() => {
     try {
       return JSON.parse(localStorage.getItem('user') || 'null')
@@ -38,7 +39,7 @@ export default function Orders() {
   const [count, setCount] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize] = useState(5)
-  const [status, setStatus] = useState('')
+  const [status, setStatus] = useState(searchParams.get('status') || '')
   const [carrier, setCarrier] = useState('')
   const [search, setSearch] = useState('')
   const [ordering, setOrdering] = useState('-created_at')
@@ -46,6 +47,11 @@ export default function Orders() {
   const [error, setError] = useState('')
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    setStatus(searchParams.get('status') || '')
+    setPage(1)
+  }, [searchParams])
 
   useEffect(() => {
     if (!user) navigate('/login')

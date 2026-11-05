@@ -1,6 +1,50 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
+function getApiUrl() {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL
+  const { protocol, hostname } = window.location
+  return `${protocol}//${hostname}:8000`
+}
 
-async function request(path, options = {}) {
+const API_URL = getApiUrl()
+
+function clearAuth() {
+  localStorage.removeItem('access')
+  localStorage.removeItem('refresh')
+  localStorage.removeItem('user')
+}
+
+async function refreshAccessToken() {
+  const refresh = localStorage.getItem('refresh')
+  if (!refresh) return null
+
+  const response = await fetch(`${API_URL}/api/token/refresh/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh }),
+  })
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok || !data.access) {
+    clearAuth()
+    return null
+  }
+
+  localStorage.setItem('access', data.access)
+  return data.access
+}
+
+function extractError(data) {
+  if (!data) return 'Something went wrong'
+  if (typeof data.detail === 'string') return data.detail
+  if (Array.isArray(data.detail)) return data.detail.join(' ')
+  return (
+    data.email?.[0] ||
+    data.password?.[0] ||
+    data.name?.[0] ||
+    data.non_field_errors?.[0] ||
+    'Something went wrong'
+  )
+}
+
+async function request(path, options = {}, retry = true) {
   const headers = {
     'Content-Type': 'application/json',
     ...(options.headers || {}),
@@ -16,16 +60,23 @@ async function request(path, options = {}) {
     headers,
   })
 
+  if (response.status === 401 && retry && !path.includes('/api/auth/login')) {
+    const nextAccess = await refreshAccessToken()
+    if (nextAccess) {
+      return request(path, options, false)
+    }
+    clearAuth()
+    if (!window.location.pathname.startsWith('/login')) {
+      window.location.assign('/login')
+    }
+    throw new Error('Session expired. Please sign in again.')
+  }
+
+  if (response.status === 204) return null
+
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
-    const message =
-      data.detail ||
-      data.email?.[0] ||
-      data.password?.[0] ||
-      data.name?.[0] ||
-      data.non_field_errors?.[0] ||
-      'Something went wrong'
-    throw new Error(typeof message === 'string' ? message : JSON.stringify(message))
+    throw new Error(extractError(data))
   }
   return data
 }
@@ -46,6 +97,10 @@ export function login({ email, password }) {
 
 export function me() {
   return request('/api/auth/me/')
+}
+
+export function getDashboard() {
+  return request('/api/orders/dashboard/')
 }
 
 function toQuery(params = {}) {
