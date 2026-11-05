@@ -202,3 +202,4 @@ MAILERS = {
 # Gemini / AI
 # -------------------------
 GEMINI_API_KEY = config("GEMINI_API_KEY")
+GEMINI_MODEL = config("GEMINI_MODEL", default="gemini-3.1-flash-lite")
