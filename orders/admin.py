@@ -81,7 +81,9 @@ class OrderItemAdmin(admin.ModelAdmin):
     list_filter = ("order",)
     search_fields = ("product__name",)
     readonly_fields = ("created_at", "updated_at")
-    fields = ("order", "product", "quantity", "price", "created_at", "updated_at")
+    fields = (
+        "order", "product", "quantity", "price", "created_at", "updated_at"
+    )
 
 
 @admin.register(RefundRequest)
