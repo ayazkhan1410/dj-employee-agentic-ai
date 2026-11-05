@@ -21,3 +21,17 @@ class RefundStatus(models.TextChoices):
     PENDING = "pending", "Pending"
     APPROVED = "approved", "Approved"
     REJECTED = "rejected", "Rejected"
+
+
+class Role(models.TextChoices):
+    USER = "user", "User"
+    AGENT = "agent", "Agent"
+
+
+class Event(models.TextChoices):
+    SUPPORT = "support", "Support Agent"
+    TOOL_CALL = "tool_call", "Tool Call"
+    TOOL_RESULT = "tool_result", "Tool Result"
+    MANAGER = "manager", "Manager Agent"
+    RISK = "risk", "Risk Agent"
+    FINAL = "final", "Final Reply"
