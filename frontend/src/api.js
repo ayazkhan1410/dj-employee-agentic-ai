@@ -148,3 +148,20 @@ export function deleteOrder(id) {
     method: 'DELETE',
   })
 }
+
+export function getChatSupport(conversationId) {
+  const path = conversationId
+    ? `/api/support/chat/${conversationId}/`
+    : '/api/support/chat/'
+  return request(path)
+}
+
+export function sendChatSupport({ message, conversationId }) {
+  const path = conversationId
+    ? `/api/support/chat/${conversationId}/`
+    : '/api/support/chat/'
+  return request(path, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  })
+}
