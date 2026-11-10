@@ -130,7 +130,7 @@ def execute_tool(tool_name, tool_input):
 
 
 # Agent Loop
-def support_agent_tool(user_message, conversation_id):
+def support_agent_tool(user_message, conversation_id, order_id, user_id):
     conversations = Conversation.objects.filter(
         id=conversation_id
     ).first()
@@ -161,7 +161,11 @@ def support_agent_tool(user_message, conversation_id):
         ],
         config=types.GenerateContentConfig(
             # Tells the model its job/rules (support agent responsibilities).
-            system_instruction=SUPPORT_SYSTEM_PROMPT,
+            system_instruction=(
+                SUPPORT_SYSTEM_PROMPT
+                + f"\n\nThis conversation is about the order "
+                f"{order_id} and the user {user_id}"
+            ),
         ),
     )
     return response.text
