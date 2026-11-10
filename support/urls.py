@@ -1,6 +1,8 @@
 from django.urls import path
 
-from support.views import ChatSupportAPIView
+from support.views import (
+    ChatSupportAPIView, ChatSupportOrderDetailAPIView
+)
 
 urlpatterns = [
     path(
@@ -8,7 +10,8 @@ urlpatterns = [
         name="chat-support-api"
     ),
     path(
-        "chat/<int:pk>/", ChatSupportAPIView.as_view(),
-        name="chat-support-api-detail"
+        "chat/<int:order_id>/",
+        ChatSupportOrderDetailAPIView.as_view(),
+        name="chat-support-api-order-detail",
     ),
 ]

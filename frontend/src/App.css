@@ -1343,6 +1343,18 @@
   gap: 10px;
 }
 
+.chat-support.inline {
+  position: static;
+  width: 100%;
+  margin-top: 14px;
+  justify-items: stretch;
+  z-index: auto;
+}
+
+.chat-panel.inline {
+  width: 100%;
+}
+
 .chat-launcher {
   display: inline-flex;
   align-items: center;

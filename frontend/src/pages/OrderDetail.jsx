@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getOrder, patchOrder } from '../api'
 import AgentLogo from '../components/AgentLogo'
 import AppLayout from '../components/AppLayout'
+import ChatSupport from '../components/ChatSupport'
 import StatusBadge from '../components/StatusBadge'
 import StatusSelect from '../components/StatusSelect'
 
@@ -20,6 +21,7 @@ export default function OrderDetail() {
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [chatOpen, setChatOpen] = useState(false)
 
   useEffect(() => {
     if (!user) navigate('/login')
@@ -46,6 +48,10 @@ export default function OrderDetail() {
     }
   }, [user, id])
 
+  useEffect(() => {
+    setChatOpen(false)
+  }, [id])
+
   if (!user) return null
 
   function logout() {
@@ -65,7 +71,7 @@ export default function OrderDetail() {
   }
 
   return (
-    <AppLayout user={user} onLogout={logout}>
+    <AppLayout user={user} onLogout={logout} showGlobalChat={false}>
       <section className="orders-panel">
         <div className="detail-top">
           <Link to="/orders" className="ghost-btn">
@@ -73,11 +79,11 @@ export default function OrderDetail() {
           </Link>
           <button
             type="button"
-            className="action-chip primary ask-support-btn"
-            onClick={() => document.querySelector('.chat-launcher')?.click()}
+            className={`action-chip primary ask-support-btn ${chatOpen ? 'open' : ''}`}
+            onClick={() => setChatOpen((value) => !value)}
           >
             <AgentLogo size="xs" label="" />
-            Ask support
+            {chatOpen ? 'Hide support' : 'Ask support'}
           </button>
         </div>
 
@@ -138,6 +144,13 @@ export default function OrderDetail() {
             )}
           </article>
         ) : null}
+
+        <ChatSupport
+          orderId={id}
+          variant="inline"
+          open={chatOpen}
+          onOpenChange={setChatOpen}
+        />
       </section>
     </AppLayout>
   )

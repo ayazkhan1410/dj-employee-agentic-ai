@@ -149,18 +149,23 @@ export function deleteOrder(id) {
   })
 }
 
-export function getChatSupport(conversationId) {
-  const path = conversationId
-    ? `/api/support/chat/${conversationId}/`
-    : '/api/support/chat/'
-  return request(path)
+export function getChatSupport() {
+  return request('/api/support/chat/')
 }
 
-export function sendChatSupport({ message, conversationId }) {
-  const path = conversationId
-    ? `/api/support/chat/${conversationId}/`
-    : '/api/support/chat/'
-  return request(path, {
+export function sendChatSupport({ message }) {
+  return request('/api/support/chat/', {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  })
+}
+
+export function getOrderChatSupport(orderId) {
+  return request(`/api/support/chat/${orderId}/`)
+}
+
+export function sendOrderChatSupport(orderId, { message }) {
+  return request(`/api/support/chat/${orderId}/`, {
     method: 'POST',
     body: JSON.stringify({ message }),
   })

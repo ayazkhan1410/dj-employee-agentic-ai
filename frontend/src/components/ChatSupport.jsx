@@ -1,10 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
-import { getChatSupport, sendChatSupport } from '../api'
+import {
+  getChatSupport,
+  getOrderChatSupport,
+  sendChatSupport,
+  sendOrderChatSupport,
+} from '../api'
 import AgentLogo from './AgentLogo'
 
-const WELCOME = {
-  from: 'agent',
-  text: 'Hi, I am your AI Employee support agent. Ask about orders, tracking, or refunds.',
+function welcomeMessage(orderId) {
+  if (orderId) {
+    return {
+      from: 'agent',
+      text: `Hi, I can help with order #${orderId} — tracking, status, or refunds.`,
+    }
+  }
+  return {
+    from: 'agent',
+    text: 'Hi, I am your AI Employee support agent. Ask about orders, tracking, or refunds.',
+  }
 }
 
 function agentTextFromResponse(data) {
@@ -16,24 +29,43 @@ function agentTextFromResponse(data) {
   return 'Got a response, but could not read the message.'
 }
 
-export default function ChatSupport() {
-  const [open, setOpen] = useState(false)
+export default function ChatSupport({
+  orderId = null,
+  variant = 'floating',
+  open: openProp,
+  onOpenChange,
+}) {
+  const isInline = variant === 'inline'
+  const [internalOpen, setInternalOpen] = useState(Boolean(isInline && openProp))
+  const open = openProp !== undefined ? openProp : internalOpen
   const [typing, setTyping] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
-  const [conversationId, setConversationId] = useState(null)
-  const [messages, setMessages] = useState([WELCOME])
+  const [messages, setMessages] = useState(() => [welcomeMessage(orderId)])
   const endRef = useRef(null)
+
+  function setOpen(next) {
+    const value = typeof next === 'function' ? next(open) : next
+    if (onOpenChange) onOpenChange(value)
+    if (openProp === undefined) setInternalOpen(value)
+  }
+
+  useEffect(() => {
+    setMessages([welcomeMessage(orderId)])
+    setError('')
+    setMessage('')
+  }, [orderId])
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, typing, open])
 
   useEffect(() => {
-    if (!open || !conversationId) return undefined
+    if (!open) return undefined
 
     let active = true
-    getChatSupport(conversationId)
+    const loader = orderId ? getOrderChatSupport(orderId) : getChatSupport()
+    loader
       .then((data) => {
         if (!active) return
         const history = data.messages || data.history
@@ -47,13 +79,13 @@ export default function ChatSupport() {
         }
       })
       .catch(() => {
-        // Keep local messages if history endpoint is still a stub.
+        // Keep local welcome if history endpoint is still a stub.
       })
 
     return () => {
       active = false
     }
-  }, [open, conversationId])
+  }, [open, orderId])
 
   async function sendMessage(event) {
     event.preventDefault()
@@ -66,14 +98,9 @@ export default function ChatSupport() {
     setTyping(true)
 
     try {
-      const data = await sendChatSupport({
-        message: text,
-        conversationId,
-      })
-      const nextId = data.conversation_id || data.id || conversationId
-      if (nextId && nextId !== conversationId) {
-        setConversationId(nextId)
-      }
+      const data = orderId
+        ? await sendOrderChatSupport(orderId, { message: text })
+        : await sendChatSupport({ message: text })
       setMessages((prev) => [
         ...prev,
         { from: 'agent', text: agentTextFromResponse(data) },
@@ -92,65 +119,76 @@ export default function ChatSupport() {
     }
   }
 
+  const panel = open ? (
+    <div
+      className={`chat-panel ${isInline ? 'inline' : ''}`}
+      role="dialog"
+      aria-label={orderId ? `Chat support for order ${orderId}` : 'Chat support'}
+    >
+      <div className="chat-panel-header">
+        <div className="chat-agent-identity">
+          <AgentLogo size="sm" pulse />
+          <div>
+            <strong>{orderId ? `Order #${orderId} support` : 'AI Support Agent'}</strong>
+            <small>
+              {orderId ? 'This order only' : 'Orders · tracking · refunds'}
+            </small>
+          </div>
+        </div>
+        <button type="button" className="ghost-btn" onClick={() => setOpen(false)}>
+          Close
+        </button>
+      </div>
+
+      <div className="chat-messages">
+        {messages.map((item, index) => (
+          <div
+            key={`${item.from}-${index}`}
+            className={`chat-row ${item.from === 'user' ? 'user' : 'agent'}`}
+          >
+            {item.from === 'agent' ? <AgentLogo size="xs" /> : null}
+            <div className={`chat-bubble ${item.from === 'user' ? 'user' : 'agent'}`}>
+              {item.text}
+            </div>
+          </div>
+        ))}
+        {typing ? (
+          <div className="chat-row agent">
+            <AgentLogo size="xs" pulse />
+            <div className="chat-bubble agent typing">
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+        ) : null}
+        <div ref={endRef} />
+      </div>
+
+      {error ? <p className="auth-error chat-error">{error}</p> : null}
+
+      <form className="chat-compose" onSubmit={sendMessage}>
+        <input
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder={orderId ? `Ask about order #${orderId}...` : 'Ask about an order...'}
+          aria-label="Chat message"
+          disabled={typing}
+        />
+        <button type="submit" className="btn-space" disabled={typing || !message.trim()}>
+          Send
+        </button>
+      </form>
+    </div>
+  ) : null
+
+  if (isInline) {
+    return open ? <div className="chat-support inline">{panel}</div> : null
+  }
+
   return (
     <div className="chat-support">
-      {open ? (
-        <div className="chat-panel" role="dialog" aria-label="Chat support">
-          <div className="chat-panel-header">
-            <div className="chat-agent-identity">
-              <AgentLogo size="sm" pulse />
-              <div>
-                <strong>AI Support Agent</strong>
-                <small>Orders · tracking · refunds</small>
-              </div>
-            </div>
-            <button type="button" className="ghost-btn" onClick={() => setOpen(false)}>
-              Close
-            </button>
-          </div>
-
-          <div className="chat-messages">
-            {messages.map((item, index) => (
-              <div
-                key={`${item.from}-${index}`}
-                className={`chat-row ${item.from === 'user' ? 'user' : 'agent'}`}
-              >
-                {item.from === 'agent' ? <AgentLogo size="xs" /> : null}
-                <div className={`chat-bubble ${item.from === 'user' ? 'user' : 'agent'}`}>
-                  {item.text}
-                </div>
-              </div>
-            ))}
-            {typing ? (
-              <div className="chat-row agent">
-                <AgentLogo size="xs" pulse />
-                <div className="chat-bubble agent typing">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-              </div>
-            ) : null}
-            <div ref={endRef} />
-          </div>
-
-          {error ? <p className="auth-error chat-error">{error}</p> : null}
-
-          <form className="chat-compose" onSubmit={sendMessage}>
-            <input
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Ask about an order..."
-              aria-label="Chat message"
-              disabled={typing}
-            />
-            <button type="submit" className="btn-space" disabled={typing || !message.trim()}>
-              Send
-            </button>
-          </form>
-        </div>
-      ) : null}
-
+      {panel}
       <button
         type="button"
         className={`chat-launcher ${open ? 'open' : ''}`}

@@ -1,12 +1,13 @@
 import AgentLogo from './AgentLogo'
 
-export default function SupportBackdrop() {
+export default function SupportBackdrop({ disabled = false }) {
   function openChat() {
+    if (disabled) return
     document.querySelector('.chat-launcher')?.click()
   }
 
   return (
-    <div className="support-backdrop">
+    <div className={`support-backdrop ${disabled ? 'disabled' : ''}`}>
       <svg
         className="support-wave"
         viewBox="0 0 1440 320"
@@ -34,21 +35,23 @@ export default function SupportBackdrop() {
         AI SUPPORT AGENT
       </p>
 
-      <button
-        type="button"
-        className="support-backdrop-orb"
-        onClick={openChat}
-        aria-label="Open AI support chat"
-        title="Chat with AI support"
-      >
-        <span className="support-backdrop-float">
-          <span className="support-backdrop-core">
-            <span className="support-backdrop-ring" aria-hidden="true" />
-            <span className="support-backdrop-ring delay" aria-hidden="true" />
-            <AgentLogo size="md" pulse label="" />
+      {disabled ? null : (
+        <button
+          type="button"
+          className="support-backdrop-orb"
+          onClick={openChat}
+          aria-label="Open AI support chat"
+          title="Chat with AI support"
+        >
+          <span className="support-backdrop-float">
+            <span className="support-backdrop-core">
+              <span className="support-backdrop-ring" aria-hidden="true" />
+              <span className="support-backdrop-ring delay" aria-hidden="true" />
+              <AgentLogo size="md" pulse label="" />
+            </span>
           </span>
-        </span>
-      </button>
+        </button>
+      )}
     </div>
   )
 }
