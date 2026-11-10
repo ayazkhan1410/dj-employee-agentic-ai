@@ -20,10 +20,6 @@ export default function OrderDetail() {
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [agentOpen, setAgentOpen] = useState(false)
-  const [agentInput, setAgentInput] = useState('')
-  const [agentMessages, setAgentMessages] = useState([])
-  const [agentBusy, setAgentBusy] = useState(false)
 
   useEffect(() => {
     if (!user) navigate('/login')
@@ -68,27 +64,6 @@ export default function OrderDetail() {
     }
   }
 
-  function askAgent(event) {
-    event.preventDefault()
-    const text = agentInput.trim()
-    if (!text || agentBusy) return
-
-    setAgentMessages((prev) => [...prev, { from: 'user', text }])
-    setAgentInput('')
-    setAgentBusy(true)
-
-    window.setTimeout(() => {
-      setAgentMessages((prev) => [
-        ...prev,
-        {
-          from: 'agent',
-          text: `Got it for order #${id}. Agent help is not connected yet — soon I can explain status, tracking, and refunds.`,
-        },
-      ])
-      setAgentBusy(false)
-    }, 650)
-  }
-
   return (
     <AppLayout user={user} onLogout={logout}>
       <section className="orders-panel">
@@ -98,11 +73,11 @@ export default function OrderDetail() {
           </Link>
           <button
             type="button"
-            className={`agent-help-btn ${agentOpen ? 'active' : ''}`}
-            onClick={() => setAgentOpen((value) => !value)}
+            className="action-chip primary ask-support-btn"
+            onClick={() => document.querySelector('.chat-launcher')?.click()}
           >
-            <AgentLogo size="sm" pulse={!agentOpen} />
-            {agentOpen ? 'Hide Agent' : 'Ask AI Agent'}
+            <AgentLogo size="xs" label="" />
+            Ask support
           </button>
         </div>
 
@@ -162,99 +137,6 @@ export default function OrderDetail() {
               <p className="home-sub">No line items on this order.</p>
             )}
           </article>
-        ) : null}
-
-        {agentOpen ? (
-          <aside className="glass-card agent-helper">
-            <div className="agent-helper-head">
-              <AgentLogo
-                size="md"
-                pulse
-                interactive
-                onClick={() =>
-                  setAgentMessages((prev) => [
-                    ...prev,
-                    {
-                      from: 'agent',
-                      text: 'Ready when you are. Ask about tracking, status, or refunds for this order.',
-                    },
-                  ])
-                }
-                label="Activate order agent"
-              />
-              <div>
-                <strong>Order Agent</strong>
-                <small>Interactive helper · coming soon</small>
-              </div>
-            </div>
-
-            <div className="agent-quick-actions">
-              <button
-                type="button"
-                className="action-chip"
-                onClick={() => setAgentInput('Where is my shipment?')}
-              >
-                📦 Tracking
-              </button>
-              <button
-                type="button"
-                className="action-chip"
-                onClick={() => setAgentInput('Explain this order status')}
-              >
-                ℹ️ Status
-              </button>
-              <button
-                type="button"
-                className="action-chip"
-                onClick={() => setAgentInput('Can I request a refund?')}
-              >
-                💸 Refund
-              </button>
-            </div>
-
-            <div className="agent-thread">
-              {agentMessages.length === 0 ? (
-                <p className="home-sub">
-                  Click the agent logo or a quick action to start. Backend replies will
-                  be wired later.
-                </p>
-              ) : (
-                agentMessages.map((item, index) => (
-                  <div
-                    key={`${item.from}-${index}`}
-                    className={`chat-row ${item.from === 'user' ? 'user' : 'agent'}`}
-                  >
-                    {item.from === 'agent' ? <AgentLogo size="xs" /> : null}
-                    <div className={`chat-bubble ${item.from}`}>
-                      {item.text}
-                    </div>
-                  </div>
-                ))
-              )}
-              {agentBusy ? (
-                <div className="chat-row agent">
-                  <AgentLogo size="xs" pulse />
-                  <div className="chat-bubble agent typing">
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
-            <form onSubmit={askAgent} className="agent-helper-form">
-              <input
-                value={agentInput}
-                onChange={(e) => setAgentInput(e.target.value)}
-                placeholder={`Help with order #${id}...`}
-                aria-label="Ask order agent"
-              />
-              <button type="submit" className="btn-space" disabled={agentBusy}>
-                Ask
-              </button>
-            </form>
-          </aside>
         ) : null}
       </section>
     </AppLayout>

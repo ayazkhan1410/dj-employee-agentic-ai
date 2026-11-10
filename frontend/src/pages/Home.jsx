@@ -79,7 +79,7 @@ export default function Home() {
           <div className="home-actions">
             <button
               type="button"
-              className="action-chip"
+              className="action-chip primary"
               onClick={() => navigate('/orders')}
             >
               My orders

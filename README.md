@@ -21,8 +21,8 @@ docker compose up --build
 | Service   | URL                         |
 |-----------|-----------------------------|
 | Frontend  | http://localhost:3000       |
-| Backend   | http://localhost:8000       |
-| Admin     | http://localhost:8000/admin |
+| Backend   | http://localhost:9000       |
+| Admin     | http://localhost:9000/admin |
 
 Demo logins (seeded on backend start):
 

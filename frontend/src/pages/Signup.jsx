@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { login, signup } from '../api'
+import AgentLogo from '../components/AgentLogo'
 import AppLayout from '../components/AppLayout'
 
 export default function Signup() {
@@ -33,8 +34,11 @@ export default function Signup() {
   return (
     <AppLayout>
       <section className="auth-box">
+        <div className="auth-brand">
+          <AgentLogo size="md" pulse label="" />
+        </div>
         <h1>Create account</h1>
-        <p className="auth-hint">Register with name, email, and password.</p>
+        <p className="auth-hint">A few details and you can manage your orders.</p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label>

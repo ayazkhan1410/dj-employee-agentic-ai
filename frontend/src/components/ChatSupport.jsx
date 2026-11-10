@@ -100,8 +100,8 @@ export default function ChatSupport() {
             <div className="chat-agent-identity">
               <AgentLogo size="sm" pulse />
               <div>
-                <strong>AI Employee Support</strong>
-                <small>Online</small>
+                <strong>AI Support Agent</strong>
+                <small>Orders · tracking · refunds</small>
               </div>
             </div>
             <button type="button" className="ghost-btn" onClick={() => setOpen(false)}>

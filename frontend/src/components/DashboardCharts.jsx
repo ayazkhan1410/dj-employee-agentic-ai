@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import StatusBadge from './StatusBadge'
 
 const STATUS_COLORS = {
-  pending: '#fbbf24',
-  processing: '#60a5fa',
-  shipped: '#a78bfa',
-  delivered: '#34d399',
-  cancelled: '#fb7185',
+  pending: '#9a6700',
+  processing: '#175cd3',
+  shipped: '#7e22ce',
+  delivered: '#067647',
+  cancelled: '#b42318',
 }
 
 const USER_STATUS_COPY = {
@@ -183,8 +183,8 @@ export function NextSteps({ summary }) {
       action: () => navigate('/orders?status=pending'),
     },
     {
-      title: 'Ask support',
-      detail: 'Open chat if you need help with an order',
+      title: 'Ask the AI support agent',
+      detail: 'Open chat for tracking, status, or refunds',
       action: () => document.querySelector('.chat-launcher')?.click(),
     },
   ]
