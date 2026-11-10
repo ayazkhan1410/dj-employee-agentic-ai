@@ -1,0 +1,13 @@
+---
+description: Only change what the user explicitly asked; no extras without permission
+alwaysApply: true
+---
+
+# Do Only What Is Asked
+
+- Change **only** the code needed for the user's exact request.
+- Do **not** refactor, rename, reformat, “improve”, or touch unrelated files.
+- Do **not** fix nearby bugs, update responses, swap constants, or add features unless the user asked.
+- If something else looks wrong, **mention it in one short line** and wait for permission.
+- Prefer the smallest edit that fulfills the request over rewriting a function or file.
+- When unsure about scope, ask before editing more.

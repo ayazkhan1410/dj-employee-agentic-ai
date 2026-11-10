@@ -24,8 +24,9 @@ class RefundStatus(models.TextChoices):
 
 
 class Role(models.TextChoices):
+    # Gemini content roles: user / model
     USER = "user", "User"
-    AGENT = "agent", "Agent"
+    MODEL = "model", "Model"
 
 
 class Event(models.TextChoices):
