@@ -53,65 +53,45 @@ Refunds: pending = under review, approved = accepted, rejected = not accepted.
 5. Never share other customers' or system-private info.
 """
 
-# Support Tools
+# Support Tools (Gemini format)
 SUPPORT_TOOLS = [
-    {
-        "name": "get_order_details",
-        "description": (
-            "Get full details for one order using its order ID. "
-            "Shows status, carrier, tracking number, date, address, "
-            "phone, total, and the products in the order. "
-            "Use this when someone asks about a specific order."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "order_id": {
-                    "type": "integer",
-                    "description": "Order ID number, like 7 or 12.",
+    types.Tool(
+        function_declarations=[
+            types.FunctionDeclaration(
+                name="get_order_details",
+                description="Get order details by order ID.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "order_id": {"type": "integer"},
+                    },
+                    "required": ["order_id"],
                 },
-            },
-            "required": ["order_id"],
-        },
-    },
-    {
-        "name": "check_delivery_status",
-        "description": (
-            "Check where a package is using its tracking number. "
-            "Shows carrier, status, and last update time. "
-            "Use this when someone asks about shipping or tracking."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "tracking_number": {
-                    "type": "string",
-                    "description": (
-                        "Tracking number, like TRK-3-DONE or USPS778899."
-                    ),
+            ),
+            types.FunctionDeclaration(
+                name="check_delivery_status",
+                description="Check delivery status by tracking number.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "tracking_number": {"type": "string"},
+                    },
+                    "required": ["tracking_number"],
                 },
-            },
-            "required": ["tracking_number"],
-        },
-    },
-    {
-        "name": "get_refund_history",
-        "description": (
-            "Get all refund requests for a user. "
-            "Shows refund status, reason, date, order ID, and products. "
-            "Use this when someone asks about refunds or returns."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "user_id": {
-                    "type": "integer",
-                    "description": "User ID number for that customer.",
+            ),
+            types.FunctionDeclaration(
+                name="get_refund_history",
+                description="Get refund history by user ID.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "user_id": {"type": "integer"},
+                    },
+                    "required": ["user_id"],
                 },
-            },
-            "required": ["user_id"],
-        },
-    },
+            ),
+        ]
+    )
 ]
 
 
@@ -143,29 +123,67 @@ def support_agent_tool(user_message, conversation_id, order_id, user_id):
         for message in conversations.messages.all().order_by("-created_at")
     ]
 
-    response = client.models.generate_content(
-        model=model,
-        contents=[
-            {
-                # Role choices match Gemini (user/model);
-                # map legacy "agent" → model.
-                "role": (
-                    msg["role"]
-                    if msg["role"] in ("user", "model")
-                    else "model"
-                ),
-                # Gemini message body goes in parts[].text
-                "parts": [{"text": msg["content"]}],
-            }
-            for msg in reversed(conversation_messages)
-        ],
-        config=types.GenerateContentConfig(
-            # Tells the model its job/rules (support agent responsibilities).
-            system_instruction=(
-                SUPPORT_SYSTEM_PROMPT
-                + f"\n\nThis conversation is about the order "
-                f"{order_id} and the user {user_id}"
+    # Build contents once so tool results can be appended in the loop.
+    contents = [
+        {
+            # Role choices match Gemini (user/model);
+            # map legacy "agent" → model.
+            "role": (
+                msg["role"]
+                if msg["role"] in ("user", "model")
+                else "model"
             ),
-        ),
-    )
-    return response.text
+            # Gemini message body goes in parts[].text
+            "parts": [{"text": msg["content"]}],
+        }
+        for msg in reversed(conversation_messages)
+    ]
+
+    # Send conversation to Gemini
+    while True:
+        response = client.models.generate_content(
+            model=model,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                # Tells the model its job/rules
+                system_instruction=(
+                    SUPPORT_SYSTEM_PROMPT
+                    + f"\n\nThis conversation is about the order "
+                    f"{order_id} and the user {user_id}"
+                ),
+                tools=SUPPORT_TOOLS,
+            ),
+        )
+
+        print("RESPONSE FROM GEMINI ========== ", response.json())
+        print("STOP REASON ========== ", response.candidates[0].finish_reason)
+
+        part = response.candidates[0].content.parts[0]
+        print("PART ========== ", part)
+        if part.function_call:
+            tool_name = part.function_call.name
+            print("TOOL NAME ========== ", tool_name)
+            tool_input = dict(part.function_call.args or {})
+            print("TOOL INPUT ========== ", tool_input)
+            result = execute_tool(tool_name, tool_input)
+            print("RESULT ========== ", result)
+
+            # Keep model tool call, then send tool result back to Gemini.
+            contents.append(response.candidates[0].content)
+            contents.append(
+                types.Content(
+                    role="user",
+                    parts=[
+                        types.Part.from_function_response(
+                            name=tool_name,
+                            response={"result": result},
+                        )
+                    ],
+                )
+            )
+            continue
+
+        return response.text or (
+            "Sorry, I could not generate a reply. Please try again."
+        )
+
