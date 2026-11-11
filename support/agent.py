@@ -159,10 +159,9 @@ def support_agent_tool(user_message, conversation_id, order_id, user_id):
         print("STOP REASON ========== ", response.candidates[0].finish_reason)
 
         part = response.candidates[0].content.parts[0]
-        print("PART ========== ", part)
         if part.function_call:
             tool_name = part.function_call.name
-            print("TOOL NAME ========== ", tool_name)
+            print("TOOL CALL ========== ", tool_name)
             tool_input = dict(part.function_call.args or {})
             print("TOOL INPUT ========== ", tool_input)
             result = execute_tool(tool_name, tool_input)
@@ -186,4 +185,3 @@ def support_agent_tool(user_message, conversation_id, order_id, user_id):
         return response.text or (
             "Sorry, I could not generate a reply. Please try again."
         )
-
