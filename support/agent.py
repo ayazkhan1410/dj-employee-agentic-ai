@@ -167,7 +167,7 @@ def support_agent_tool(user_message, conversation_id, order_id, user_id):
             result = execute_tool(tool_name, tool_input)
             print("RESULT ========== ", result)
 
-            # Keep model tool call, then send tool result back to Gemini.
+            # Keep previous chat + model tool call, then append clear tool data.
             contents.append(response.candidates[0].content)
             contents.append(
                 types.Content(
@@ -175,13 +175,13 @@ def support_agent_tool(user_message, conversation_id, order_id, user_id):
                     parts=[
                         types.Part.from_function_response(
                             name=tool_name,
-                            response={"result": result},
+                            response={
+                                "tool": tool_name,
+                                "input": tool_input,
+                                "result": result,
+                            },
                         )
                     ],
                 )
             )
             continue
-
-        return response.text or (
-            "Sorry, I could not generate a reply. Please try again."
-        )
