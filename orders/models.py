@@ -1,7 +1,7 @@
-from django.db import models
 from django.contrib.auth.models import User
+from django.db import models
 
-from orders.utils.choices import OrderStatus, Carrier, RefundStatus
+from orders.utils.choices import Carrier, OrderStatus, RefundStatus
 
 
 class TimeStampedModel(models.Model):

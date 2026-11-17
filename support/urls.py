@@ -1,8 +1,6 @@
 from django.urls import path
 
-from support.views import (
-    ChatSupportAPIView, ChatSupportOrderDetailAPIView
-)
+from support.views import ChatSupportAPIView, ChatSupportOrderDetailAPIView
 
 urlpatterns = [
     path(

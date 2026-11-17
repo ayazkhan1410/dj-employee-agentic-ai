@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from orders.models import Category, Product, Order, OrderItem, RefundRequest
+from orders.models import Category, Order, OrderItem, Product, RefundRequest
 
 
 @admin.register(Category)

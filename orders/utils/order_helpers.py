@@ -5,7 +5,6 @@ from django.shortcuts import get_object_or_404
 from orders.models import Order, OrderItem, Product
 from orders.utils.choices import Carrier, OrderStatus
 
-
 ORDER_WRITE_FIELDS = (
     "carrier",
     "tracking_number",

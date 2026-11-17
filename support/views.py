@@ -72,9 +72,9 @@ class ChatSupportOrderDetailAPIView(APIView):
         # Sending message to the AI
         ai_response = support_agent_tool(
             user_message,
-            conversation_id=conversation.id,
-            order_id=order.id,
-            user_id=request.user.id,
+            conversation_id=conversation.pk,
+            order_id=order.pk,
+            user_id=request.user.pk,
         )
 
         # Saving the AI response
@@ -87,8 +87,8 @@ class ChatSupportOrderDetailAPIView(APIView):
         return Response(
             {
                 "message": ai_response,
-                "conversation_id": conversation.id,
-                "order_id": order.id,
+                "conversation_id": conversation.pk,
+                "order_id": order.pk,
             },
             status=status.HTTP_200_OK,
         )

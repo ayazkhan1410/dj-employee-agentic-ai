@@ -1,6 +1,5 @@
-from django.db import models
-
 from django.contrib.auth.models import User
+from django.db import models
 
 from orders.models import Order, TimeStampedModel
 from orders.utils.choices import Event, Role

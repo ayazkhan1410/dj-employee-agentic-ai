@@ -199,7 +199,23 @@ MAILERS = {
 }
 
 # -------------------------
-# Gemini / AI
+# Gemini / AI (optional / tests)
 # -------------------------
-GEMINI_API_KEY = config("GEMINI_API_KEY")
+GEMINI_API_KEY = config("GEMINI_API_KEY", default="")
 GEMINI_MODEL = config("GEMINI_MODEL", default="gemini-3.1-flash-lite")
+
+# -------------------------
+# OpenRouter chat support
+# -------------------------
+LANDING_CHAT_SUPPORT_API_KEY = config("LANDING_CHAT_SUPPORT_API_KEY", default="")
+LANDING_CHAT_MODELS = config(
+    "LANDING_CHAT_MODELS",
+    default=(
+        "nvidia/nemotron-3.5-super-vl:free,"
+        "nvidia/nemotron-3-ultra-550b-a55b:free"
+    ),
+)
+OPENROUTER_BASE_URL = config(
+    "OPENROUTER_BASE_URL",
+    default="https://openrouter.ai/api/v1",
+)
