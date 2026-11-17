@@ -1,27 +1,17 @@
 import json
-import logging
 import urllib.error
 import urllib.request
 from pathlib import Path
 
 from django.conf import settings
 
+from support.agent_logs import AgentRunLog
 from support.models import Conversation, Message
 from support.tools import (
     check_delivery_status,
     get_order_details,
     get_refund_history,
 )
-
-logger = logging.getLogger(__name__)
-
-
-def _log_section(title: str, *args) -> None:
-    # Same clear block style as .env.example section headers.
-    logger.info("-------------------------")
-    logger.info(title, *args)
-    logger.info("-------------------------")
-
 
 # Support System Prompt (edit support/system_prompt.md)
 SUPPORT_SYSTEM_PROMPT = (
@@ -75,9 +65,13 @@ SUPPORT_TOOLS = [
 ]
 
 
-def execute_tool(tool_name, tool_input):
-    _log_section("Tool call: %s", tool_name)
-    logger.info("Tool input: %s", tool_input)
+def execute_tool(
+    tool_name,
+    tool_input,
+    run_log: AgentRunLog | None = None,
+):
+    log = run_log if run_log is not None else AgentRunLog()
+    log.calling_tool(tool_name, tool_input)
 
     if tool_name == "get_order_details":
         result = get_order_details(tool_input["order_id"])
@@ -88,22 +82,23 @@ def execute_tool(tool_name, tool_input):
     else:
         result = None
 
-    _log_section("Tool finished: %s", tool_name)
+    log.tool_returned(tool_name, result)
+    if run_log is None:
+        log.flush()
     return result
 
 
-def support_agent_tool(user_message, conversation_id, order_id, user_id):
-    _log_section("Support agent start")
-    logger.info("conversation_id=%s", conversation_id)
-    logger.info("order_id=%s", order_id)
-    logger.info("user_id=%s", user_id)
+def support_agent_tool(conversation_id, order_id, user_id):
+    run_log = AgentRunLog()
 
     # Step 1: load this conversation from DB
     conversation = Conversation.objects.filter(id=conversation_id).first()
     if conversation is None:
-        _log_section("Conversation not found")
-        logger.warning("conversation_id=%s", conversation_id)
+        run_log.conversation_missing(conversation_id)
+        run_log.flush()
         return "Sorry, I could not find this conversation."
+    run_log.set_conversation(conversation)
+    run_log.request_received(user_id, order_id, conversation_id)
 
     # Step 2: pick OpenRouter model from env (first in the list)
     model_name = (
@@ -112,9 +107,10 @@ def support_agent_tool(user_message, conversation_id, order_id, user_id):
     )
     api_key = settings.LANDING_CHAT_SUPPORT_API_KEY
     if not api_key:
+        run_log.api_key_missing()
+        run_log.flush()
         raise ValueError("LANDING_CHAT_SUPPORT_API_KEY is not set")
-    _log_section("OpenRouter model")
-    logger.info("model=%s", model_name)
+    run_log.using_model(model_name)
 
     # Step 3: load previous chat via Message query
     history = []
@@ -130,9 +126,14 @@ def support_agent_tool(user_message, conversation_id, order_id, user_id):
                 "content": message.content,
             }
         )
-    _log_section("Previous chat loaded")
-    logger.info("message_count=%s", len(history))
-    logger.info("conversation_id=%s", conversation_id)
+
+    latest_user_message = ""
+    for item in reversed(history):
+        if item["role"] == "user":
+            latest_user_message = item["content"]
+            break
+    run_log.user_message(latest_user_message)
+    run_log.chat_context_loaded(max(len(history) - 1, 0))
 
     # Step 4: start messages with system prompt + previous chat
     messages = [
@@ -149,7 +150,7 @@ def support_agent_tool(user_message, conversation_id, order_id, user_id):
 
     # Step 5: agent loop — call OpenRouter, run tools, append results, repeat
     for round_number in range(1, 6):
-        _log_section("OpenRouter round=%s", round_number)
+        run_log.asking_agent(round_number)
         payload = {
             "model": model_name,
             "messages": messages,
@@ -169,19 +170,21 @@ def support_agent_tool(user_message, conversation_id, order_id, user_id):
                 data = json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace")
-            _log_section("OpenRouter HTTP error")
-            logger.error("status=%s body=%s", exc.code, body)
+            run_log.openrouter_failed(exc.code, body)
+            run_log.flush()
             raise
 
         choice = (data.get("choices") or [{}])[0]
         message = choice.get("message") or {}
         tool_calls = message.get("tool_calls") or []
-        _log_section("OpenRouter response")
-        logger.info("round=%s", round_number)
-        logger.info("tool_calls=%s", len(tool_calls))
 
         # Step 6: if model asked for tools, run them and continue
         if tool_calls:
+            tool_names = [
+                (call.get("function") or {}).get("name") or "unknown"
+                for call in tool_calls
+            ]
+            run_log.decided_tools(tool_names)
             messages.append(message)
 
             for tool_call in tool_calls:
@@ -191,11 +194,10 @@ def support_agent_tool(user_message, conversation_id, order_id, user_id):
                 try:
                     tool_input = json.loads(raw_args)
                 except json.JSONDecodeError:
-                    _log_section("Bad tool arguments")
-                    logger.warning("tool=%s args=%s", tool_name, raw_args)
+                    run_log.bad_tool_arguments(tool_name, raw_args)
                     tool_input = {}
 
-                result = execute_tool(tool_name, tool_input)
+                result = execute_tool(tool_name, tool_input, run_log)
 
                 # Append tool result so next turn keeps previous chat + data
                 messages.append(
@@ -212,22 +214,23 @@ def support_agent_tool(user_message, conversation_id, order_id, user_id):
                         ),
                     }
                 )
+            run_log.feeding_tool_results()
             continue
 
         # Step 7: no tool call → final text reply for the user
+        run_log.no_tool_needed(round_number)
         text = (message.get("content") or "").strip()
         if not text:
-            _log_section("Empty model text")
-            logger.warning("round=%s", round_number)
+            run_log.empty_agent_text(round_number)
+            run_log.flush()
             return (
                 "Sorry, I could not generate a reply. Please try again."
             )
 
-        _log_section("Support agent done")
-        logger.info("conversation_id=%s", conversation_id)
-        logger.info("reply_len=%s", len(text))
+        run_log.agent_reply(text)
+        run_log.flush()
         return text
 
-    _log_section("Support agent max rounds")
-    logger.error("conversation_id=%s", conversation_id)
+    run_log.max_steps_reached(conversation_id)
+    run_log.flush()
     return "Sorry, I could not finish that request. Please try again."

@@ -149,6 +149,10 @@ export function deleteOrder(id) {
   })
 }
 
+export function getAgentLogsDashboard(params = {}) {
+  return request(`/api/support/agent-logs/${toQuery(params)}`)
+}
+
 export function getChatSupport() {
   return request('/api/support/chat/')
 }

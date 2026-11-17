@@ -103,6 +103,11 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
+        "support": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }
 

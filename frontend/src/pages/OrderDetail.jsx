@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getOrder, patchOrder } from '../api'
-import AgentLogo from '../components/AgentLogo'
 import AppLayout from '../components/AppLayout'
-import ChatSupport from '../components/ChatSupport'
-import StatusBadge from '../components/StatusBadge'
+import { getStatusMeta } from '../components/StatusBadge'
 import StatusSelect from '../components/StatusSelect'
 
 export default function OrderDetail() {
@@ -21,7 +19,6 @@ export default function OrderDetail() {
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [chatOpen, setChatOpen] = useState(false)
 
   useEffect(() => {
     if (!user) navigate('/login')
@@ -48,10 +45,6 @@ export default function OrderDetail() {
     }
   }, [user, id])
 
-  useEffect(() => {
-    setChatOpen(false)
-  }, [id])
-
   if (!user) return null
 
   function logout() {
@@ -71,86 +64,61 @@ export default function OrderDetail() {
   }
 
   return (
-    <AppLayout user={user} onLogout={logout} showGlobalChat={false}>
-      <section className="orders-panel">
+    <AppLayout
+      user={user}
+      onLogout={logout}
+      orderChatId={id}
+      title="Order"
+      accent={`#${id}`}
+      sub={order ? `$${order.total_amount} · ${getStatusMeta(order.status).label}` : ''}
+    >
+      <section className="page">
         <div className="detail-top">
-          <Link to="/orders" className="ghost-btn">
-            ← Back to orders
-          </Link>
-          <button
-            type="button"
-            className={`action-chip primary ask-support-btn ${chatOpen ? 'open' : ''}`}
-            onClick={() => setChatOpen((value) => !value)}
-          >
-            <AgentLogo size="xs" label="" />
-            {chatOpen ? 'Hide support' : 'Ask support'}
-          </button>
+          <Link to="/orders">Orders</Link>
         </div>
 
-        {loading ? <p className="home-sub">Loading order…</p> : null}
+        {loading ? <p className="muted">Loading…</p> : null}
         {error ? <p className="auth-error">{error}</p> : null}
 
         {order ? (
-          <article className="glass-card order-detail-card">
-            <div className="orders-hero">
-              <div>
-                <p className="eyebrow">Order detail</p>
-                <h1>Order #{order.id}</h1>
-                <div className="detail-status-row">
-                  <StatusBadge status={order.status} />
-                  <span className="home-sub">${order.total_amount}</span>
-                </div>
-              </div>
-              <StatusSelect value={order.status} onChange={handleStatusChange} />
-            </div>
+          <>
+            <dl className="facts">
+              <dt>Change status</dt>
+              <dd>
+                <StatusSelect value={order.status} onChange={handleStatusChange} />
+              </dd>
+              <dt>Carrier</dt>
+              <dd>{order.carrier_display || '—'}</dd>
+              <dt>Tracking</dt>
+              <dd className="mono">{order.tracking_number || '—'}</dd>
+              <dt>Phone</dt>
+              <dd>{order.customer_phone || '—'}</dd>
+              <dt>Placed</dt>
+              <dd>{new Date(order.created_at).toLocaleString()}</dd>
+              <dt>Ship to</dt>
+              <dd>{order.shipping_address || '—'}</dd>
+            </dl>
 
-            <div className="detail-grid">
-              <div>
-                <small>Carrier</small>
-                <strong>{order.carrier_display || '—'}</strong>
-              </div>
-              <div>
-                <small>Tracking</small>
-                <strong>{order.tracking_number || '—'}</strong>
-              </div>
-              <div>
-                <small>Phone</small>
-                <strong>{order.customer_phone || '—'}</strong>
-              </div>
-              <div>
-                <small>Created</small>
-                <strong>{new Date(order.created_at).toLocaleString()}</strong>
-              </div>
-              <div className="full">
-                <small>Shipping address</small>
-                <strong>{order.shipping_address || '—'}</strong>
-              </div>
+            <div className="section-head">
+              <h2>Items</h2>
             </div>
-
             {order.items?.length ? (
-              <div className="detail-items">
-                <h3>Items</h3>
-                <ul>
+              <table className="table">
+                <tbody>
                   {order.items.map((item) => (
-                    <li key={item.id}>
-                      {item.product_name || `Product #${item.product}`} · qty{' '}
-                      {item.quantity} · ${item.price}
-                    </li>
+                    <tr key={item.id}>
+                      <td>{item.product_name || `Product #${item.product}`}</td>
+                      <td className="num">× {item.quantity}</td>
+                      <td className="num">${item.price}</td>
+                    </tr>
                   ))}
-                </ul>
-              </div>
+                </tbody>
+              </table>
             ) : (
-              <p className="home-sub">No line items on this order.</p>
+              <p className="muted">No line items on this order.</p>
             )}
-          </article>
+          </>
         ) : null}
-
-        <ChatSupport
-          orderId={id}
-          variant="inline"
-          open={chatOpen}
-          onOpenChange={setChatOpen}
-        />
       </section>
     </AppLayout>
   )

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { createOrder, deleteOrder, listOrders, patchOrder } from '../api'
 import AppLayout from '../components/AppLayout'
-import StatusBadge from '../components/StatusBadge'
 import StatusSelect from '../components/StatusSelect'
 
 const STATUS_OPTIONS = [
@@ -134,18 +133,16 @@ export default function Orders() {
   }
 
   return (
-    <AppLayout user={user} onLogout={logout}>
-      <section className="orders-panel">
-        <div className="glass-card orders-hero">
-          <div>
-            <p className="eyebrow">Workspace</p>
-            <h1>Your Orders</h1>
-            <p className="home-sub">Filter, sort, and manage orders for your account.</p>
-          </div>
-          <div className="orders-count">{count} total</div>
-        </div>
+    <AppLayout
+      user={user}
+      onLogout={logout}
+      title={`${count} ${count === 1 ? 'order' : 'orders'}`}
+      accent="on your account"
+      sub="Filter, check status or open one for details."
+    >
+      <section className="page">
 
-        <form className="glass-card orders-filters" onSubmit={(e) => {
+        <form className="orders-filters" onSubmit={(e) => {
           e.preventDefault()
           setPage(1)
           loadOrders()
@@ -177,8 +174,9 @@ export default function Orders() {
           <button type="submit" className="btn-space">Apply</button>
         </form>
 
-        <form className="glass-card order-create" onSubmit={handleCreate}>
-          <h2>Create order</h2>
+        <details className="order-create-box">
+        <summary>New order</summary>
+        <form className="order-create" onSubmit={handleCreate}>
           <div className="order-create-grid">
             <select
               value={form.carrier}
@@ -222,54 +220,64 @@ export default function Orders() {
             {saving ? 'Saving…' : 'Create order'}
           </button>
         </form>
+        </details>
 
         {error ? <p className="auth-error">{error}</p> : null}
-        {loading ? <p className="home-sub">Loading orders…</p> : null}
+        {loading ? <p className="muted">Loading…</p> : null}
 
-        <div className="task-list">
-          {orders.map((order) => (
-            <article key={order.id} className="glass-card task-card order-row">
-              <div>
-                <div className="order-title-row">
-                  <h3>
-                    <Link to={`/orders/${order.id}`}>
-                      Order #{order.id}
-                    </Link>
-                    {' · '}${order.total_amount}
-                  </h3>
-                  <StatusBadge status={order.status} />
-                </div>
-                <p>
-                  {order.carrier_display || 'No carrier'} · {order.tracking_number || 'No tracking'}
-                </p>
-                <p>{order.shipping_address || 'No address'}</p>
-                <small>{new Date(order.created_at).toLocaleString()}</small>
-              </div>
-              <div className="order-actions">
-                <StatusSelect
-                  value={order.status}
-                  onChange={(next) => handleStatusChange(order.id, next)}
-                />
-                <Link to={`/orders/${order.id}`} className="ghost-btn">
-                  Details
-                </Link>
-                <button type="button" className="ghost-btn" onClick={() => handleDelete(order.id)}>
-                  Delete
-                </button>
-              </div>
-            </article>
-          ))}
-          {!loading && orders.length === 0 ? (
-            <div className="glass-card task-card">
-              <p>No orders found for your filters.</p>
-            </div>
-          ) : null}
-        </div>
+        {orders.length ? (
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Placed</th>
+                <th>Carrier / tracking</th>
+                <th className="num">Total</th>
+                <th>Status</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {orders.map((order) => (
+                <tr key={order.id}>
+                  <td>
+                    <Link to={`/orders/${order.id}`}>#{order.id}</Link>
+                  </td>
+                  <td>{new Date(order.created_at).toLocaleDateString()}</td>
+                  <td>
+                    {order.carrier_display || '—'}
+                    <span className="mono"> {order.tracking_number}</span>
+                  </td>
+                  <td className="num">${order.total_amount}</td>
+                  <td>
+                    <StatusSelect
+                      value={order.status}
+                      onChange={(next) => handleStatusChange(order.id, next)}
+                    />
+                  </td>
+                  <td className="num">
+                    <div className="row-actions">
+                      <Link to={`/orders/${order.id}`} className="pill-btn small">
+                        Details
+                      </Link>
+                      <button type="button" className="text-btn" onClick={() => handleDelete(order.id)}>
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : null}
+        {!loading && orders.length === 0 ? (
+          <p className="muted">No orders match these filters.</p>
+        ) : null}
 
         <div className="orders-pagination">
           <button
             type="button"
-            className="ghost-btn"
+            className="text-btn"
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
@@ -280,7 +288,7 @@ export default function Orders() {
           </span>
           <button
             type="button"
-            className="ghost-btn"
+            className="text-btn"
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
           >

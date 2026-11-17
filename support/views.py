@@ -1,13 +1,26 @@
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from orders.models import Order
 from orders.utils.choices import Role
 from support.agent import support_agent_tool
+from support.dashboard import build_agent_logs_dashboard
 from support.models import Conversation, Message
+
+
+class AgentLogsDashboardAPIView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        data = build_agent_logs_dashboard(
+            request.user,
+            request.query_params,
+        )
+        return Response(data)
 
 
 class ChatSupportAPIView(APIView):
@@ -71,7 +84,6 @@ class ChatSupportOrderDetailAPIView(APIView):
 
         # Sending message to the AI
         ai_response = support_agent_tool(
-            user_message,
             conversation_id=conversation.pk,
             order_id=order.pk,
             user_id=request.user.pk,

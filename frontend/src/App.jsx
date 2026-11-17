@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import AgentLogs from './pages/AgentLogs'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import OrderDetail from './pages/OrderDetail'
@@ -13,6 +14,7 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/home" element={<Home />} />
+      <Route path="/agent-logs" element={<AgentLogs />} />
       <Route path="/orders" element={<Orders />} />
       <Route path="/orders/:id" element={<OrderDetail />} />
     </Routes>

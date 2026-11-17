@@ -2,12 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getDashboard } from '../api'
 import AppLayout from '../components/AppLayout'
-import {
-  NextSteps,
-  StatCards,
-  StatusDonut,
-  VolumeBars,
-} from '../components/DashboardCharts'
 import StatusBadge from '../components/StatusBadge'
 
 export default function Home() {
@@ -51,11 +45,6 @@ export default function Home() {
 
   if (!user) return null
 
-  const firstName = (user.name || 'there').split(' ')[0]
-  const hour = new Date().getHours()
-  const greeting =
-    hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
-
   function logout() {
     localStorage.removeItem('access')
     localStorage.removeItem('refresh')
@@ -63,80 +52,75 @@ export default function Home() {
     navigate('/login')
   }
 
-  return (
-    <AppLayout user={user} onLogout={logout}>
-      <section className="home-hero">
-        <div className="dash-hero">
-          <div>
-            <p className="eyebrow">My home</p>
-            <h1>
-              {greeting}, {firstName}
-            </h1>
-            <p className="home-sub">
-              Here’s a quick look at your orders and what needs attention.
-            </p>
-          </div>
-          <div className="home-actions">
-            <button
-              type="button"
-              className="action-chip primary"
-              onClick={() => navigate('/orders')}
-            >
-              My orders
-            </button>
-            <button
-              type="button"
-              className="action-chip"
-              onClick={() => navigate('/orders')}
-            >
-              Place an order
-            </button>
-          </div>
-        </div>
+  const summary = dashboard?.summary
+  const recent = dashboard?.recent_orders || []
+  const active = recent.filter((o) =>
+    ['pending', 'processing', 'shipped'].includes(o.status),
+  )
+  const earlier = recent.filter((o) => !active.includes(o))
+  const inTransit = summary?.shipped_count ?? 0
+  const firstName = (user.name || '').split(' ')[0]
+  const today = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  })
 
-        {loading ? <p className="home-sub">Loading your overview…</p> : null}
+  return (
+    <AppLayout
+      user={user}
+      onLogout={logout}
+      title={
+        summary
+          ? `${summary.order_count} ${summary.order_count === 1 ? 'order' : 'orders'},`
+          : `Hi ${firstName},`
+      }
+      accent={summary ? `${inTransit} on the way` : 'one moment'}
+      sub={`${today}${firstName ? ` · ${firstName}'s account` : ''}`}
+    >
+      <section className="page">
+        {loading ? <p className="muted">Loading…</p> : null}
         {error ? <p className="auth-error">{error}</p> : null}
 
-        {dashboard ? (
+        {summary && recent.length === 0 ? (
+          <p className="muted">You have no orders yet.</p>
+        ) : null}
+
+        {active.length ? (
+          <div className="sheet-card">
+            {active.map((order) => (
+              <div className="order-line" key={order.id}>
+                <span className="leaf">#{order.id}</span>
+                <div className="order-line-text">
+                  <strong>${order.total_amount}</strong>
+                  <small>{order.carrier_display || 'Carrier pending'}</small>
+                </div>
+                <StatusBadge status={order.status} />
+                <Link to={`/orders/${order.id}`} className="pill-btn">
+                  Open
+                </Link>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {earlier.length ? (
           <>
-            <StatCards summary={dashboard.summary} />
-
-            <div className="chart-grid">
-              <StatusDonut data={dashboard.charts.status} />
-              <VolumeBars data={dashboard.charts.volume} />
-              <NextSteps summary={dashboard.summary} />
+            <div className="section-head">
+              <h2>Earlier</h2>
+              <Link to="/orders">All orders</Link>
             </div>
-
-            <div className="glass-card recent-card">
-              <div className="chart-card-head">
-                <h3>Your recent orders</h3>
-                <Link to="/orders">See all</Link>
-              </div>
-              <div className="recent-list">
-                {dashboard.recent_orders.length ? (
-                  dashboard.recent_orders.map((order) => (
-                    <Link
-                      key={order.id}
-                      to={`/orders/${order.id}`}
-                      className="recent-row"
-                    >
-                      <div>
-                        <strong>Order #{order.id}</strong>
-                        <small>
-                          {order.carrier_display || 'Carrier pending'} · $
-                          {order.total_amount}
-                        </small>
-                      </div>
-                      <StatusBadge status={order.status} />
-                    </Link>
-                  ))
-                ) : (
-                  <p className="home-sub">
-                    You have no orders yet. Place one to get started.
-                  </p>
-                )}
-              </div>
-            </div>
+            <ul className="quiet-list">
+              {earlier.map((order) => (
+                <li key={order.id}>
+                  <span className="leaf quiet">#{order.id}</span>
+                  <Link to={`/orders/${order.id}`}>
+                    {order.carrier_display || 'Order'} · ${order.total_amount}
+                  </Link>
+                  <StatusBadge status={order.status} />
+                </li>
+              ))}
+            </ul>
           </>
         ) : null}
       </section>

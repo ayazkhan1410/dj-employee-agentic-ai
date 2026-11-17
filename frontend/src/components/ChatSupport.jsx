@@ -193,10 +193,9 @@ export default function ChatSupport({
         type="button"
         className={`chat-launcher ${open ? 'open' : ''}`}
         onClick={() => setOpen((value) => !value)}
-        aria-label="Open chat support"
+        aria-label={open ? 'Hide chat support' : 'Open chat support'}
       >
         <AgentLogo size="sm" pulse={!open} />
-        {open ? 'Hide' : 'Chat'}
       </button>
     </div>
   )

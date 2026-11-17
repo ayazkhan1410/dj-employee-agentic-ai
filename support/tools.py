@@ -11,11 +11,30 @@ def get_order_details(order_id):
     except (Order.DoesNotExist, TypeError, ValueError):
         return f"Order with id {order_id} does not exist"
 
+    order_items = [
+        {
+            "product_name": item.product.name,
+            "product_price": str(item.price),
+            "product_quantity": item.quantity,
+        }
+        for item in order.items.all()
+    ]
+    product_names = [item["product_name"] for item in order_items]
+    # Friendly label for chat replies (prefer product names over "order 3").
+    if not product_names:
+        order_label = f"Order #{order.pk}"
+    elif len(product_names) == 1:
+        order_label = product_names[0]
+    else:
+        order_label = ", ".join(product_names)
+
     return {
         # -------------------
         # Order Details
         # -------------------
         "order_id": order.pk,
+        "order_label": order_label,
+        "product_names": product_names,
         "order_tracking_number": order.tracking_number,
         "order_date": order.created_at.strftime("%Y-%m-%d"),
         "order_status": order.status,
@@ -32,14 +51,7 @@ def get_order_details(order_id):
         # -------------------
         # Order Items
         # -------------------
-        "order_items": [
-            {
-                "product_name": item.product.name,
-                "product_price": str(item.price),
-                "product_quantity": item.quantity,
-            }
-            for item in order.items.all()
-        ],
+        "order_items": order_items,
     }
 
 
@@ -85,15 +97,27 @@ def get_refund_history(user_id):
 
 def check_delivery_status(tracking_number):
     try:
-        order = Order.objects.get(tracking_number=tracking_number)
+        order = Order.objects.prefetch_related("items__product").get(
+            tracking_number=tracking_number
+        )
     except (Order.DoesNotExist, TypeError, ValueError):
         return f"Order with tracking number {tracking_number} does not exist"
     except Exception as e:
         return f"Error checking delivery status: {e}"
+
+    product_names = [item.product.name for item in order.items.all()]
+    if not product_names:
+        order_label = f"Order #{order.pk}"
+    elif len(product_names) == 1:
+        order_label = product_names[0]
+    else:
+        order_label = ", ".join(product_names)
 
     return {
         "tracking_number": order.tracking_number,
         "carrier": order.carrier,
         "delivery_status": order.status,
         "last_updated": order.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+        "order_label": order_label,
+        "product_names": product_names,
     }
