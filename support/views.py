@@ -44,10 +44,45 @@ class ChatSupportAPIView(APIView):
 
 
 class ChatSupportOrderDetailAPIView(APIView):
+
     def get(self, request, order_id):
-        return Response({
-            "message": "Hello, world!"
-        }, status=status.HTTP_200_OK)
+        get_object_or_404(Order, id=order_id, user=request.user)
+        conversation = (
+            Conversation.objects.filter(
+                order_id=order_id,
+                user=request.user,
+            )
+            .order_by("id")
+            .first()
+        )
+        if conversation is None:
+            return Response(
+                {
+                    "conversation_id": None,
+                    "order_id": order_id,
+                    "messages": [],
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        messages = conversation.messages.order_by("created_at", "id")
+        return Response(
+            {
+                "conversation_id": conversation.id,
+                "order_id": order_id,
+                "messages": [
+                    {
+                        "id": message.id,
+                        "role": message.role,
+                        "content": message.content,
+                        "created_at": message.created_at.isoformat(),
+                    }
+                    for message in messages
+                    if message.content
+                ],
+            },
+            status=status.HTTP_200_OK,
+        )
 
     def post(self, request, order_id):
         user_message = request.data.get("message")

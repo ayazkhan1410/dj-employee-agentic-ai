@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  getChatSupport,
   getOrderChatSupport,
   sendChatSupport,
   sendOrderChatSupport,
@@ -10,14 +9,38 @@ import AgentLogo from './AgentLogo'
 function welcomeMessage(orderId) {
   if (orderId) {
     return {
+      id: 'welcome',
       from: 'agent',
       text: `Hi, I can help with order #${orderId} — tracking, status, or refunds.`,
     }
   }
   return {
+    id: 'welcome',
     from: 'agent',
     text: 'Hi, I am your AI Employee support agent. Ask about orders, tracking, or refunds.',
   }
+}
+
+function mapHistoryMessages(history, orderId) {
+  if (!Array.isArray(history) || !history.length) {
+    return [welcomeMessage(orderId)]
+  }
+
+  const sorted = [...history].sort((a, b) => {
+    const left = a.created_at || ''
+    const right = b.created_at || ''
+    if (left === right) return (a.id || 0) - (b.id || 0)
+    return left.localeCompare(right)
+  })
+
+  return sorted
+    .map((item) => ({
+      id: item.id ?? `${item.role}-${item.created_at}`,
+      from: item.role === 'user' || item.from === 'user' ? 'user' : 'agent',
+      text: item.content || item.text || item.message || '',
+      created_at: item.created_at || null,
+    }))
+    .filter((item) => item.text)
 }
 
 function agentTextFromResponse(data) {
@@ -39,8 +62,10 @@ export default function ChatSupport({
   const [internalOpen, setInternalOpen] = useState(Boolean(isInline && openProp))
   const open = openProp !== undefined ? openProp : internalOpen
   const [typing, setTyping] = useState(false)
+  const [loadingHistory, setLoadingHistory] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [conversationId, setConversationId] = useState(null)
   const [messages, setMessages] = useState(() => [welcomeMessage(orderId)])
   const endRef = useRef(null)
 
@@ -50,50 +75,52 @@ export default function ChatSupport({
     if (openProp === undefined) setInternalOpen(value)
   }
 
+  const loadHistory = useCallback(async () => {
+    if (!orderId) {
+      setMessages([welcomeMessage(null)])
+      setConversationId(null)
+      return
+    }
+
+    setLoadingHistory(true)
+    setError('')
+    try {
+      const data = await getOrderChatSupport(orderId)
+      setConversationId(data.conversation_id ?? null)
+      setMessages(mapHistoryMessages(data.messages || data.history, orderId))
+    } catch (err) {
+      setMessages([welcomeMessage(orderId)])
+      setError(err.message || 'Could not load previous chat.')
+    } finally {
+      setLoadingHistory(false)
+    }
+  }, [orderId])
+
   useEffect(() => {
     setMessages([welcomeMessage(orderId)])
+    setConversationId(null)
     setError('')
     setMessage('')
   }, [orderId])
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, typing, open])
+  }, [messages, typing, open, loadingHistory])
 
   useEffect(() => {
     if (!open) return undefined
-
-    let active = true
-    const loader = orderId ? getOrderChatSupport(orderId) : getChatSupport()
-    loader
-      .then((data) => {
-        if (!active) return
-        const history = data.messages || data.history
-        if (Array.isArray(history) && history.length) {
-          setMessages(
-            history.map((item) => ({
-              from: item.role === 'user' || item.from === 'user' ? 'user' : 'agent',
-              text: item.content || item.text || item.message || '',
-            })),
-          )
-        }
-      })
-      .catch(() => {
-        // Keep local welcome if history endpoint is still a stub.
-      })
-
-    return () => {
-      active = false
-    }
-  }, [open, orderId])
+    loadHistory()
+    return undefined
+  }, [open, loadHistory])
 
   async function sendMessage(event) {
     event.preventDefault()
     const text = message.trim()
-    if (!text || typing) return
+    if (!text || typing || loadingHistory) return
 
+    const tempId = `local-${Date.now()}`
     setError('')
-    setMessages((prev) => [...prev, { from: 'user', text }])
+    setMessages((prev) => [...prev, { id: tempId, from: 'user', text }])
     setMessage('')
     setTyping(true)
 
@@ -101,15 +128,25 @@ export default function ChatSupport({
       const data = orderId
         ? await sendOrderChatSupport(orderId, { message: text })
         : await sendChatSupport({ message: text })
+
+      if (data.conversation_id) {
+        setConversationId(data.conversation_id)
+      }
+
       setMessages((prev) => [
         ...prev,
-        { from: 'agent', text: agentTextFromResponse(data) },
+        {
+          id: `reply-${Date.now()}`,
+          from: 'agent',
+          text: agentTextFromResponse(data),
+        },
       ])
     } catch (err) {
       setError(err.message || 'Could not send message.')
       setMessages((prev) => [
         ...prev,
         {
+          id: `error-${Date.now()}`,
           from: 'agent',
           text: 'Sorry, I could not reach support right now. Please try again.',
         },
@@ -131,7 +168,13 @@ export default function ChatSupport({
           <div>
             <strong>{orderId ? `Order #${orderId} support` : 'AI Support Agent'}</strong>
             <small>
-              {orderId ? 'This order only' : 'Orders · tracking · refunds'}
+              {loadingHistory
+                ? 'Loading previous chat…'
+                : conversationId
+                  ? 'Previous conversation restored'
+                  : orderId
+                    ? 'This order only'
+                    : 'Orders · tracking · refunds'}
             </small>
           </div>
         </div>
@@ -141,17 +184,28 @@ export default function ChatSupport({
       </div>
 
       <div className="chat-messages">
-        {messages.map((item, index) => (
-          <div
-            key={`${item.from}-${index}`}
-            className={`chat-row ${item.from === 'user' ? 'user' : 'agent'}`}
-          >
-            {item.from === 'agent' ? <AgentLogo size="xs" /> : null}
-            <div className={`chat-bubble ${item.from === 'user' ? 'user' : 'agent'}`}>
-              {item.text}
+        {loadingHistory ? (
+          <div className="chat-row agent">
+            <AgentLogo size="xs" pulse />
+            <div className="chat-bubble agent typing">
+              <span />
+              <span />
+              <span />
             </div>
           </div>
-        ))}
+        ) : (
+          messages.map((item) => (
+            <div
+              key={item.id}
+              className={`chat-row ${item.from === 'user' ? 'user' : 'agent'}`}
+            >
+              {item.from === 'agent' ? <AgentLogo size="xs" /> : null}
+              <div className={`chat-bubble ${item.from === 'user' ? 'user' : 'agent'}`}>
+                {item.text}
+              </div>
+            </div>
+          ))
+        )}
         {typing ? (
           <div className="chat-row agent">
             <AgentLogo size="xs" pulse />
@@ -173,9 +227,13 @@ export default function ChatSupport({
           onChange={(e) => setMessage(e.target.value)}
           placeholder={orderId ? `Ask about order #${orderId}...` : 'Ask about an order...'}
           aria-label="Chat message"
-          disabled={typing}
+          disabled={typing || loadingHistory}
         />
-        <button type="submit" className="btn-space" disabled={typing || !message.trim()}>
+        <button
+          type="submit"
+          className="btn-space"
+          disabled={typing || loadingHistory || !message.trim()}
+        >
           Send
         </button>
       </form>
